@@ -29,7 +29,14 @@ let players = [];
 let zombie = { x: 100, y: 100 };
 let myId = null;
 
-const socket = new WebSocket("ws://localhost:8765");
+/* -------- ROOM FROM URL -------- */
+
+const params = new URLSearchParams(window.location.search);
+const room = params.get("room") || "default";
+
+const socket = new WebSocket(`ws://localhost:8765/?room=${room}`);
+
+/* -------------------------------- */
 
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -64,7 +71,7 @@ function draw() {
     players.forEach(p => {
 
         if(p.id === myId){
-            ctx.fillStyle = "lime";  // your player
+            ctx.fillStyle = "lime";
         } else {
             ctx.fillStyle = "blue";
         }
@@ -80,7 +87,8 @@ function draw() {
     if(me){
         ctx.fillStyle = "white";
         ctx.font = "20px Arial";
-        ctx.fillText("Health: " + me.health, 20, 30);
+        ctx.fillText("Room: " + room, 20, 30);
+        ctx.fillText("Health: " + me.health, 20, 60);
 
         if(me.health <= 0){
             ctx.fillStyle = "red";

@@ -29,10 +29,22 @@ async def game_loop():
 
 
 async def handler(websocket):
+    path = websocket.path
+
+    room_name = "default"
+
+    if "room=" in path:
+        room_name = path.split("room=")[1]
+
+    if room_name not in engine.rooms:
+        engine.rooms[room_name] = {
+            "players": {},
+            "zombie": {"x": 100, "y": 100}
+        }
 
     player_id = id(websocket)
 
-    room = engine.rooms["room1"]
+    room = engine.rooms[room_name]
 
     room["players"][websocket] = {
         "id": player_id,
