@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zombie Multiplayer</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            overflow: hidden;
+        }
+        canvas {
+            background: #222;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let players = [];
+let zombie = { x: 100, y: 100 };
+let myId = null;
+
+const socket = new WebSocket("ws://localhost:8765");
+
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if(data.type === "init"){
+        myId = data.id;
+    }
+
+    if(data.type === "state"){
+        players = data.players;
+        zombie = data.zombie;
+    }
+};
+
+window.addEventListener("keydown", (e) => {
+    const key = e.key.toUpperCase();
+    if(["W","A","S","D"].includes(key)){
+        socket.send(key);
+    }
+});
+
+window.addEventListener("keyup", (e) => {
+    const key = e.key.toUpperCase();
+    if(["W","A","S","D"].includes(key)){
+        socket.send("STOP_"+key);
+    }
+});
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    players.forEach(p => {
+
+        if(p.id === myId){
+            ctx.fillStyle = "lime";  // your player
+        } else {
+            ctx.fillStyle = "blue";
+        }
+
+        ctx.fillRect(p.x - 15, p.y - 15, 30, 30);
+    });
+
+    ctx.fillStyle = "red";
+    ctx.fillRect(zombie.x - 15, zombie.y - 15, 30, 30);
+
+    const me = players.find(p => p.id === myId);
+
+    if(me){
+        ctx.fillStyle = "white";
+        ctx.font = "20px Arial";
+        ctx.fillText("Health: " + me.health, 20, 30);
+
+        if(me.health <= 0){
+            ctx.fillStyle = "red";
+            ctx.font = "60px Arial";
+            ctx.fillText("GAME OVER", canvas.width/2 - 200, canvas.height/2);
+        }
+    }
+}
+
+function gameLoop() {
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>
