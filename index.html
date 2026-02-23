@@ -7,14 +7,47 @@
             margin: 0;
             background: #111;
             overflow: hidden;
+            color: white;
+            font-family: Arial;
         }
         canvas {
             background: #222;
-            display: block;
+            display: none;
+        }
+        #authBox {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        input {
+            margin: 5px;
+            padding: 8px;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        #error {
+            color: red;
         }
     </style>
 </head>
 <body>
+
+<div id="authBox">
+    <h2>Login / Signup</h2>
+    <input id="username" placeholder="Username"><br>
+    <input id="password" type="password" placeholder="Password"><br>
+    <button onclick="authenticate('login')">Login</button>
+    <button onclick="authenticate('signup')">Signup</button>
+    <div id="error"></div>
+</div>
 
 <canvas id="gameCanvas"></canvas>
 
@@ -28,6 +61,7 @@ canvas.height = window.innerHeight;
 let players = [];
 let zombie = { x: 100, y: 100 };
 let myId = null;
+let authenticated = false;
 
 /* -------- ROOM FROM URL -------- */
 
@@ -41,8 +75,15 @@ const socket = new WebSocket(`ws://localhost:8765/?room=${room}`);
 socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
+    if(data.type === "error"){
+        document.getElementById("error").innerText = data.message;
+    }
+
     if(data.type === "init"){
         myId = data.id;
+        authenticated = true;
+        document.getElementById("authBox").style.display = "none";
+        canvas.style.display = "block";
     }
 
     if(data.type === "state"){
@@ -51,7 +92,20 @@ socket.onmessage = (event) => {
     }
 };
 
+function authenticate(type){
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    socket.send(JSON.stringify({
+        type: type,
+        username: username,
+        password: password
+    }));
+}
+
 window.addEventListener("keydown", (e) => {
+    if(!authenticated) return;
+
     const key = e.key.toUpperCase();
     if(["W","A","S","D"].includes(key)){
         socket.send(key);
@@ -59,6 +113,8 @@ window.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("keyup", (e) => {
+    if(!authenticated) return;
+
     const key = e.key.toUpperCase();
     if(["W","A","S","D"].includes(key)){
         socket.send("STOP_"+key);
@@ -66,16 +122,12 @@ window.addEventListener("keyup", (e) => {
 });
 
 function draw() {
+    if(!authenticated) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     players.forEach(p => {
-
-        if(p.id === myId){
-            ctx.fillStyle = "lime";
-        } else {
-            ctx.fillStyle = "blue";
-        }
-
+        ctx.fillStyle = p.id === myId ? "lime" : "blue";
         ctx.fillRect(p.x - 15, p.y - 15, 30, 30);
     });
 
